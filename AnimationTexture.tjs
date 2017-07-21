@@ -1,0 +1,37 @@
+/**
+ * 横方向に等間隔で画像を詰めたテクスチャを使い、アニメーションさせる
+ */
+class AnimationTexture {
+	var texture_:Texture;
+	var sepalateCount_:int;
+	var duration_:int;
+	var loop_:bool;
+	var startTick_:int;
+	var playing_:bool;
+	var area_:Rect;
+
+	/**
+	 * @param storage テクスチャファイル名
+	 * @param count テクスチャ区切り数
+	 * @param duration 全表示時間
+	 * @param loop ループ再生有無
+	 */
+	function AnimationTexture( storage:string, count:int, duration:int, loop:bool ) {
+		texture_ = new Texture( storage );
+		sepalateCount_ = count;
+		duration_ = duration;
+		loop_ = loop;
+		playing_ = false;
+		area_ = new Rect( 0, 0, texture_.width/count, texture_.height );
+	}
+
+	function start() {
+		startTick_ = System.getTickCount();
+		playing_ = true;
+	}
+	function stop() {
+		playing_ = false;
+	}
+	function draw( canvas:Canvas ) {
+	}
+};

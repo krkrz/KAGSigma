@@ -1,0 +1,45 @@
+
+class GameScreen extends ScreenController {
+
+	var message_:MessageTexture;
+	var images_:Array;
+
+	function GameScreen( owner:CanvasWindow, width:int, height:int ) {
+		super.ScreenController( owner, width, height );
+		images_ = new Array();
+	}
+
+	function initializeGame() {
+		// OpenGL は上下反転(左下原点)なので、反転オプションを有効に
+		owner_.canvas.defaultShader.a_vertReverse = true;
+		owner_.canvas.defaultShader.a_opacity = 1.0;
+		owner_.canvas.defaultFillShader.a_vertReverse = true;
+
+		// 何となく4個にしておく
+		for( var i = 0; i < 4; i++ ) {
+			var img = new ImageNode();
+			images_.add( img );
+			nodes_.add( img );
+		}
+		message_ = new MessageTexture( width_-32, height_-32 );
+		message_.x = 16;
+		message_.y = 16;
+		nodes_.add( message_ );
+	}
+
+	function onNodeDraw( canvas:Canvas ) {
+		var count = nodes_.count;
+		for( var i = 0; i < count; i++ ) {
+			nodes_[i].draw( canvas );
+		}
+	}
+	function putText( text, color ) {
+		message_.putText( text, color );
+	}
+	function clearMessage() {
+		message_.clear();
+	}
+	function processReturn() {
+		message_.processReturn();
+	}
+};

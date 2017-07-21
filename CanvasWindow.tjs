@@ -1,0 +1,323 @@
+
+class CanvasWindow extends Window {
+	var conductor; // メインのコンダクタ
+	var tagHandlers;
+	var screen_;
+	var actualChSpeed = 30;
+	var clickWaiting = false; // クリック待ちかどうか
+	var drawWaiting = false;
+
+	function CanvasWindow(width,height) {
+		super.Window();
+		setInnerSize( width, height );
+
+		// タグハンドラ/コンダクタを作成
+		tagHandlers = getHandlers();
+		conductor = new Conductor(this, tagHandlers);
+		add(conductor);
+
+		screen_ = new GameScreen( this, width, height );
+		screen_.initializeGame();
+		add( screen_ );
+
+		drawCycle = 60;
+		visible = true;
+	}
+
+	function onPrimaryClick() {
+		conductor.trigger('click');
+	}
+	function onDraw() {
+		screen_.onDraw( canvas );
+		if( drawWaiting ) {
+			// ここだとswap前だから、やはりonPostDrawが必要か
+			drawWaiting = false;
+			conductor.trigger('draw'); // 'draw' を送る
+		}
+	}
+	function onPointerDown( type, x, y, cx, cy, shift, id ) {
+	}
+	function onPointerMove( type, x, y, cx, cy, shift, id ) {
+	}
+	function onPointerUp( type, x, y, cx, cy, shift, id ) {
+		onPrimaryClick();
+	}
+
+	function notifyRun() {}
+
+	function loadImages(elm) {
+		var index = +elm.layer;
+		var img = screen_.images_[index];
+		var storage = elm.storage;
+		img.loadImage( storage );
+		if(elm.left !== void) img.x = +elm.left;
+		if(elm.top !== void) img.y = +elm.top;
+		if(elm.visible !== void) img.visible = +elm.visible;
+		if(elm.opacity !== void) img.opacity = +elm.opacity;
+	}
+	//--------------------------------------------------- トランジション関連 --
+	function onTransitionCompleted() {
+		// トランジションが終了したときに呼ばれる
+		conductor.trigger('trans'); // 'trans' を送る
+	}
+	function beginTransition( elm ) {
+		screen_.startTransition( elm.time );
+	}
+	function waitDraw(elm) {
+		drawWaiting = true;
+		// 描画を待つ
+		conductor.wait(%[
+			draw : function {
+			} incontextof this
+			]);
+		return -2;
+	}
+	
+	function waitTransition(elm) {
+		// トランジションを待つ
+		conductor.wait(%[
+			trans : function
+			{
+			} incontextof this
+			]);
+		return -2;
+	}
+
+	function showLineBreak(elm) {
+		// conductor を 'click' まで待ち状態に
+		conductor.wait(%[
+			click : function
+			{
+				clickWaiting = false;
+				notifyRun();
+			} incontextof this
+			]);
+		clickWaiting = true;
+		return -2;
+	}
+	function showPageBreak(elm) {
+		// conductor を 'click' まで待ち状態に
+		conductor.wait(%[
+			click : function
+			{
+				clickWaiting = false;
+				notifyRun();
+			} incontextof this
+			]);
+		clickWaiting = true;
+		return -2;
+	}
+
+	//-------------------------------------------------------------- process --
+	/**
+	 * 指定ファイル、指定ラベルから実行を開始する
+	 */
+	function process(file, label, countpage = true, immediate = false) {
+		// setUserSpeed();
+
+		if(file != '') {
+			// ファイルを読み込み
+			conductor.loadScenario(file);
+		}
+
+		if(label != '') {
+			// ラベルに移動する
+			conductor.goToLabel(label);
+		}
+
+		/*
+		if(isFirstProcess) {
+			storeFlags(); // 一番最初の状態をストア
+			isFirstProcess = false;
+		}
+		*/
+
+
+		dm("処理を開始します");
+		//inSleep = false;
+		//notifyRun();
+		if(conductor.status != conductor.mRun) conductor.run(immediate); // 実行開始
+	}
+
+
+	//------------------------------------------------- コンダクタのイベント --
+	/**
+	 * コンダクタが新しいシナリオファイルを読み込む前によばれる。
+	 * name は読み込もうとしたシナリオファイル。
+	 * 戻り値に文字列を返すと、それをシナリオとしてファイルの代わりに使うようになるので、ここにフィルタを書くことができる。
+	 * true を返すと通常のシナリオファイル読み込みとなる。
+	 */
+	function onConductorScenarioLoad(name) { return true; }
+
+	/**
+	 * コンダクタが新しいシナリオファイルを読み込んだ
+	 */
+	function onConductorScenarioLoaded(name) { return true; }
+
+	/**
+	 * コンダクタがラベルを通過した
+	 */
+	function onConductorLabel(label, page) { return true; }
+
+	/**
+	 * コンダクタで jump タグを処理するとき
+	 */
+	function onConductorJump(elm) { return true; }
+
+	/**
+	 * コンダクタが call タグを処理するとき
+	 */
+	function onConductorCall(elm) { return true; }
+
+	/**
+	 * コンダクタが return タグを処理するとき
+	 */
+	function onConductorReturn(elm) { return true; }
+
+	/**
+	 * コンダクタが return タグを実行した後
+	 */
+	function onConductorAfterReturn() {}
+
+	/**
+	 * iscript ブロックを通過した
+	 */
+	function onConductorScript(script, scriptname, lineofs) { return true; }
+
+	/**
+	 * 不明なタグがあった場合
+	 */
+	function onConductorUnknownTag(tagname, elm) {
+		throw new Exception("タグ/マクロ \"" + tagname + "\" は存在しません");
+		return 0; // この戻り値は、各タグハンドラが返す物とおなじ
+	}
+	//------------------------------------------------------- タグハンドラ群 --
+	function getHandlers() {
+		return %[
+
+	//--------------------------------------- タグハンドラ群(メッセージ操作) --
+
+	ch : function(elm) {
+		// 文字表示
+		/*
+		var acs = actualChSpeed;
+		if(updateBeforeCh)
+		{
+			if(acs) { updateBeforeCh--; return -5; } else { updateBeforeCh--; }
+		}
+		var text = elm.text;
+		if(currentWithBack) current.comp.processCh(text);
+		if(current.processCh(text))
+		{
+			return showPageBreakAndClear();
+		}
+		if(historyWriteEnabled) historyLayer.store(text);
+		if(autoWCEnabled)
+		{
+			// 自動ウェイト
+			var ind;
+			if((ind = autoWCChars.indexOf(text)) != -1)
+			{
+				return int(acs * autoWCWaits[ind]);
+			}
+		}
+		return acs;
+		*/
+		var text = elm.text;
+		screen_.putText( text, 0xffffff );
+		return actualChSpeed;
+	} incontextof this,
+
+	r : function(elm) {
+		// 改行
+		/*
+		if(historyWriteEnabled) historyLayer.reline();
+		if(currentWithBack) current.comp.processReturn();
+		if(current.processReturn())
+		{
+			var ret = showPageBreakAndClear();
+			// 改行はpendingしない
+			if(ret == -5)
+				ret = -4;
+			else if(ret == -3)
+				ret = -2;
+			return ret;
+		}
+		return actualChSpeed;
+		*/
+		screen_.processReturn();
+		return actualChSpeed;
+	} incontextof this,
+
+	l : function(elm){
+		// 行クリック待ち
+		return showLineBreak(elm);
+	} incontextof this,
+
+	p : function(elm) {
+		// ページクリック待ち
+		//if(historyWriteEnabled) historyLayer.reline();
+		return showPageBreak(elm);
+	} incontextof this,
+
+	cm : function(elm) {
+		// メッセージレイヤのリセットを行うが、ct のように
+		// current のリセットは行わないもの
+		screen_.clearMessage();
+		return 0;
+	} incontextof this,
+
+	//------------------------------------------- タグハンドラ群(レイヤ操作) --
+	image : function(elm)
+	{
+		// 画像読み込み
+		// updateBeforeCh = 1;
+		var start = System.getTickCount();
+		loadImages(elm);
+		dm(elm.storage + " の読み込みに " + (System.getTickCount() - start) + "ms かかりました");
+		return 0;
+	} incontextof this,
+
+	trans : function(elm)
+	{
+		// トランジションの開始
+		beginTransition(elm);
+		return 0;
+	} incontextof this,
+
+	wt : function(elm)
+	{
+		// トランジションを待つ
+		return waitTransition(elm);
+	} incontextof this,
+	
+	wd : function(elm) {
+		// 描画を1回待つ
+		return waitDraw(elm);
+	} incontextof this,
+	
+	//----------------------------------------- タグハンドラ群(システム操作) --
+	s : function(elm)
+	{
+		// 実行停止
+/*
+		stablePosibility = true;
+		cancelSkip();
+		if(!usingExtraConductor) incRecordLabel(true);
+		inSleep = true;
+		if(recordHistoryOfStore == 2) // 2 : 選択肢 ( @s タグ ) ごと
+			setToRecordHistory();
+		notifyStable();
+
+        // メッセージレイヤタイムアウト呼び出し開始
+        current.startTimeout();
+*/
+		return -1;
+	} incontextof this,
+
+	//----------------------------------------------- タグハンドラ群の終わり --
+		interrupt : function(elm) { return -2; } incontextof this ];
+	}
+}
+
+

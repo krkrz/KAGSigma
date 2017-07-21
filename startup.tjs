@@ -1,0 +1,47 @@
+
+var dm = Debug.message; // これで dm("message"); でコンソールに message を表示できる
+
+Storages.addAutoPath( "img/" );
+//Storages.addAutoPath( "sound/" );
+//Storages.addAutoPath( "movie/" );
+Storages.addAutoPath( "glsl/" );
+Storages.addAutoPath( "font/" );
+Storages.addAutoPath( "scenario/" );
+
+// とりあえずいくつかフォントを追加する
+//Font.addFont( "NotoSansCJKjp-Regular.otf" );
+//Font.addFont( "NotoSans-Regular.ttf" );
+Font.addFont( "GenShinGothic-Monospace-Bold.ttf" );
+Font.addFont( "GenShinGothic-Monospace-Regular.ttf" );
+//Font.addFont( "MTLc3m.ttf" );
+//Font.addFont( "MTLmr3m.ttf" );
+Font.addFont( "Roboto-Regular.ttf" );
+
+Plugins.link( "kagparser.dll" );
+
+/*
+	スクリプト読み込みラッパー
+*/
+
+function KAGLoadScript(name)
+{
+	var start = System.getTickCount();
+	Scripts.execStorage(name);
+	dm(name + " を読み込みました(" + (System.getTickCount() - start) + "ms)");
+}
+
+
+
+KAGLoadScript("Conductor.tjs");
+KAGLoadScript("ImageNode.tjs");
+KAGLoadScript("RootOffscreen.tjs");
+KAGLoadScript("ScreenController.tjs");
+KAGLoadScript("GameScreen.tjs");
+KAGLoadScript("LayerOwnerTexture.tjs");
+KAGLoadScript("MessageTexture.tjs");
+KAGLoadScript("CanvasWindow.tjs");
+
+global.kag = new CanvasWindow( 640, 480 );
+
+
+kag.process("first.ks");

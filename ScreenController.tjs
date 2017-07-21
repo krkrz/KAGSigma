@@ -1,0 +1,127 @@
+/**
+ * 描画サイズのOffscreenを作り、そこに各種画像を描画、実際の画面にはそのOffscreenから
+ * バイリニアかシェーダーを使用したバイキュービック/Lanczos2などで転送する。
+ * UI層は実解像度で描画して、高繊細化する方法をとることも。
+ * 入力も必要な方へ流したり、モーダルで特定のオブジェクトへのみ通知するなども行う。
+ */
+
+
+class ScreenController {
+	var position_:Rect;
+	var screen_:RootOffscreen;
+	var nextTransStart:bool;
+	var inTransition:bool;
+	var transDuration:int;
+	var transStartTick:int;
+	var width_:int;
+	var height_:int;
+	var nodes_:Array;
+	var owner_:CanvasWindow;
+	var aspectRatio_;
+	var lastTick_;
+
+	/**
+	 * 描画幅、高さはWindowsではWindowサイズ指定があるので、クライアント領域と一致するようになるが、Androidでは画面サイズは固定なので
+	 * 一致しないことになる(Windowsでもフルスクリーン化したら同様)
+	 * 画面サイズと一致しない時、内部描画サイズで描画したものを最後に実サイズに合わせて拡大縮小/センタリング(内接)して表示する。
+	 * @param width 描画幅(環境非依存で指定し、最後に画面サイズに合わせて拡大縮小する)
+	 * @param height 描画高さ
+	 */
+	function ScreenController( owner:CanvasWindow, width:int, height:int ) {
+		screen_ = new RootOffscreen( width, height );
+		owner_ = owner;
+		width_ = width;
+		height_ = height;
+		nodes_ = new Array();
+		aspectRatio_ = (real)width/(real)height;
+
+		lastTick_ = System.getTickCount();
+		// 画面の回転に関しては考慮していない。
+	}
+
+	/**
+	 * @param canvas 描画対象キャンバス
+	 */
+	function onDraw( canvas:Canvas ) {
+		dm( "draw : " + (System.getTickCount()-lastTick_) );
+		lastTick_ = System.getTickCount();
+		if( nextTransStart ) {
+			nextTransStart = false;
+			transStartTick = System.getTickCount();
+			screen_.swapTransTexture();
+			inTransition = true;
+		}
+
+		// オフスクリーンに描画するように設定する
+		//canvas.clearColor = 0xff00ff00;
+		canvas.clearColor = 0xff000000;
+		screen_.prepareDrawing( canvas );
+
+		// この間に実際の描画を行う
+		onNodeDraw( canvas );
+		//canvas.fill( 200, 200, 0x80ff0000 );
+
+		// オフスクリーンを解除し、実際に画面へ描画先を戻す
+		screen_.postDrawing( canvas );
+
+		// 実際の画面への描画処理
+		canvas.enableClipRect = false;
+		canvas.matrix.reset();
+
+		// 画面に合わせて拡大縮小する
+		var realWidth:int = canvas.width;
+		var realHeight:int = canvas.height;
+		var width = realWidth;
+		var height = realHeight;
+		var realAspectRatio = (real)width/(real)height;
+		var aspectDeformation = aspectRatio_ / realAspectRatio - 1.0;
+		if( Math.abs(aspectDeformation) > 0.01 ) {
+			// アスペクト比が変わるので、どちらかを狭める
+			if( aspectDeformation > 0 ) {
+				height = ( width / aspectRatio_ );
+			} else {
+				width = ( height * aspectRatio_ );
+			}
+		}
+		var aw = (real)width/(real)width_;
+		var ah = (real)height/(real)height_;
+		// dm( "width : " + aw + ", height : " + ah );
+		canvas.matrix.setScale( aw, ah );
+		// 拡縮に影響されずダイレクトに移動したいので
+		canvas.matrix.m31 = (realWidth-width)/2;
+		canvas.matrix.m32 = (realHeight-height)/2;
+
+		if( inTransition == false ) {
+			screen_.draw( canvas );
+		} else {
+			var step = (real)(System.getTickCount() - transStartTick) / (real)transDuration;
+			if( step >= 1.0 )	{
+				// トランジション終了、次のフレームで通常描画
+			 	step = 1.0;
+			 	inTransition = false;
+			 	onFinishTransition();
+			 	screen_.draw( canvas );
+			} else {
+				screen_.crossfadeDraw( canvas, step );
+			}
+		}
+	}
+	function onNodeDraw( canvas:Canvas ) {
+	}
+
+	/**
+	 * @param duration トランジション時間(msec)
+	 */
+	function startTransition( duration:int ) {
+		transDuration = duration;
+		nextTransStart = true;
+	}
+	/**
+	 * トランジション終了
+	 */
+	function onFinishTransition() {
+		// トランジション終了待ちを解除するなど
+		owner_.onTransitionCompleted();
+	}
+};
+

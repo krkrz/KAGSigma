@@ -1,0 +1,84 @@
+
+class RootOffscreen {
+	var offscreen_:Offscreen;	// オフスクリーン(フレームバッファ)
+	var backtexture_:Texture;	// フレームバッファ交換用テクスチャ
+	var transtexture_:Texture;	// トランジション用テクスチャ
+
+	// ここでは直接トランジションの処理を書いているが、別途管理用のクラスを作った方が
+	// スマートかもしれない。
+	var crossfadeShader_:ShaderProgram;	// クロスフェード用シェーダ
+	var universalTransShader_:ShaderProgram;	// ユニバーサルトランジション用シェーダ
+	var defaultShader_:ShaderProgram;
+
+	function RootOffscreen( width:int, height:int ) {
+		offscreen_ = new Offscreen( width, height );
+		backtexture_ = new Texture( width, height );
+		transtexture_ = new Texture( width, height );
+		crossfadeShader_ = new ShaderProgram("default.vert","crossfade.frag");
+		universalTransShader_ = new ShaderProgram( "default.vert", "universal.frag" );
+		universalTransShader_.s_vague = (real)64 / 255.0;
+		defaultShader_ = new ShaderProgram("default_rev.vert","default.frag");
+		defaultShader_.a_opacity = 1.0;
+	}
+
+	/**
+	 * トランジションを開始する時、prepareDrawing よりも前に呼び出して、以前の描画結果を保持して置く。
+	 */
+	function swapTransTexture() {
+		var tex = transtexture_;
+		transtexture_ = backtexture_;
+		backtexture_ = tex;
+	}
+
+	function prepareDrawing( canvas:Canvas ) {
+		canvas.renderTarget = offscreen_;
+		canvas.defaultShader = defaultShader_;
+		canvas.matrix.reset();
+		canvas.clear(0xff000000);
+	}
+
+	function postDrawing( canvas:Canvas ) {
+		// レンダーターゲット変更、内部でflushされている。
+		canvas.renderTarget = void;
+		canvas.defaultShader = void;
+
+		// オフスクリーンのテクスチャを交換する。
+		offscreen_.exchangeTexture( backtexture_ );
+	}
+
+	/**
+	 * 画面(描画領域)サイズを取得して、そのサイズに合うように内接拡大するなどする。
+	 * クロスフェードが必要な時などは、それに応じた描画が必要。
+	 * クロスフェードなどするのなら、フェード前の画像を置いておく必要がある。
+	 * backtexture_を他のテクスチャと差し替えるなどして保持。
+	 * フェード中に前の画面の更新を続けるのなら、1度描いた後にflushしてテクスチャ取り出して、
+	 * clearした後さらに次の画面の描画を行う。
+	 * とりあえず、ここではそのまま描画しているので、左上に出るだけ。
+	 */
+	function draw( canvas:Canvas ) {
+		canvas.blendMode = bmOpaque;
+		canvas.a_opacity = 1.0;
+		canvas.drawTexture( backtexture_ );
+	}
+
+	/**
+	 * @param canvas 
+	 * @param step 0.0～1.0でクロスフェードの進み具合を指定
+	 */
+	function crossfadeDraw( canvas:Canvas, step:real ) {
+		canvas.blendMode = bmOpaque;
+		crossfadeShader_.s_opacity = step;
+		canvas.drawTexture( transtexture_, backtexture_, crossfadeShader_ );
+	}
+	/**
+	 * @param canvas 
+	 * @param rule ルール画像テクスチャ、アルファテクスチャを指定する
+	 * @param step 0.0～1.0でクロスフェードの進み具合を指定
+	 */
+	function universalTransitionDraw( canvas:Canvas, step:real, rule:Texture ) {
+		canvas.blendMode = bmOpaque;
+		universalTransShader_.s_phase = step;
+		canvas.drawTexture( transtexture_, backtexture_, rule, universalTransShader_ );
+	}
+};
+

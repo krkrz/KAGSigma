@@ -1,0 +1,56 @@
+
+
+class ImageNode {
+	var texture_:Texture;
+	var filename_:string;
+	var x_:int;
+	var y_:int;
+	var visible_:bool;
+
+	// 現状opacityを反映していないというか、シェーダーで対応していない……
+	// defaultシェーダーでも透明度指定できる方が良いか
+	var opacity_:real;
+
+	function ImageNode() {
+		x_ = 0;
+		y_ = 0;
+		visible_ = false;
+		opacity_ = 1.0;
+	}
+
+	function draw( canvas:Canvas ) {
+		if( texture_ !== void && visible_ ) {
+			canvas.save();
+			canvas.matrix.translate( x_, y_ );
+			canvas.blendMode = bmAlpha;
+			canvas.defaultShader.a_opacity = opacity_;
+			canvas.drawTexture( texture_ );
+			canvas.restore();
+		}
+	}
+	function loadImage( storage ) {
+		if( texture_ === void ) invalidate texture_;
+		texture_ = new Texture( storage );
+		filename_ = storage;
+	}
+	function unload() {
+		if( texture_ !== void ) invalidate texture_;
+		texture_ = void;
+	}
+	property x {
+		getter() { return x_; }
+		setter( v ) { x_ = v; }
+	}
+	property y {
+		getter() { return y_; }
+		setter( v ) { y_ = v; }
+	}
+	property visible {
+		getter() { return visible_; }
+		setter( v ) { visible_ = v; }
+	}
+	property opacity {
+		getter() { return (int)(opacity_*255); }
+		setter( v ) { opacity_ = (real)v / 255.0; }
+	}
+};

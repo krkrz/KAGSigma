@@ -1,0 +1,53 @@
+/**
+ * BitmapLayerTreeOwnerをオーナーとするLayerを作り、レイヤーの描画結果をTextureに転送して画面描画する
+ */
+
+class LayerOwnerTexture {
+	var layer_owner_:BitmapLayerTreeOwner;
+	var primary_:Layer;
+	var texture_:Texture;
+
+	function LayerOwnerTexture(width:int, height:int) {
+		layer_owner_ = new BitmapLayerTreeOwner();
+		primary_ = new Layer( layer_owner_, null );
+		primary_.setImageSize(width, height);
+		primary_.setSizeToImageSize();
+		primary_.face = dfAlpha;
+		primary_.fillRect( 0, 0, width, height, 0 );
+		primary_.visible = true;
+		primary_.update();
+		texture_ = void;
+	}
+
+	function update() {
+		if( texture_ === void ) {
+			// 初回描画時は、bitmapをそのまま転送
+			texture_ = new Texture( layer_owner_.bitmap );
+			// 更新情報をクリア
+			layer_owner_.clearDirtyRect();
+		} else {
+			if( texture_.width != layer_owner_.width || texture_.height != layer_owner_.height ) {
+				// プライマリレイヤー(Layer owner)のサイズ変更があった時はテクスチャを作り直す
+				invalidate texture_;
+				texture_ = new Texture( layer_owner_.bitmap );
+				layer_owner_.clearDirtyRect();
+
+				// テクスチャの再生成とメモリ転送は負荷増なので、変更時は例外としてしまってもいいかもしれない
+				// throw new ConductorException("プライマリレイヤーのサイズを変更することはできません");
+			} else {
+				// 更新があった場合は、それをテクスチャに反映する。
+				if( layer_owner_.isUpdated ) {
+					var rect:Rect = layer_owner_.dirtyRect;
+					texture_.copyRect( rect.left, rect.top, layer_owner_.bitmap, rect );
+					layer_owner_.clearDirtyRect();
+				}
+			}
+		}
+	}
+
+	property texture {
+		getter() { return texture_; }
+	}
+};
+
+

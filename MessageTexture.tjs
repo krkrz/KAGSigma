@@ -1,0 +1,71 @@
+/**
+ * 文字を描画するためのテクスチャ
+ *
+ * BitmapLayerTreeOwnerで描画するので、やや富豪的実装となっている。
+ * ほぼ更新しないのであれば、Bitmap/ImageFunction/Font/Textureを組み合わせて、Textureを生成する方が良い。
+ * もしくは、Layer利用が多いのであれば、LayerOwnerTextureにLayerをつなげて、そこで色々描画させた方がよい。
+ * この実装は、従来のメッセージレイヤーを単一で使うことを実現するための実装。
+ */
+class MessageTexture extends LayerOwnerTexture {
+	var textX_:int;
+	var textY_:int;
+	var x:int;
+	var y:int;
+	var opacity_:int;
+
+	function MessageTexture( width:int , height:int ) {
+		super.LayerOwnerTexture( width, height );
+
+		//primary_.font.face = "Noto Sans CJK JP,Noto Sans,MotoyaLMaru,Roboto";
+		primary_.font.face = "Gen Shin Gothic Monospace";
+		primary_.font.height = 26;
+
+
+		textX_ = 10;
+		textY_ = 10;
+		x = 0;
+		y = 0;
+		opacity_ = 128;
+	}
+
+	// function drawText(x, y, text, color, opa=255, aa=true, shadowlevel=0, shadowcolor=0x000000, shadowwidth=0, shadowofsx=0, shadowofsy=0) {}
+	/**
+	 * レイヤーに描画しているので、onDraw内関係なく描画できる。
+	 * Canvasで描画するのであれば、onDraw内で描画しなければならず、内部で一度コマンドを溜めるなどする必要がある。
+	 */
+	function putText( text, color ) {
+		var w = primary_.font.getEscWidthX( text );
+		if( (w + textX_) > (width-10) ) {
+			var h = primary_.font.height; // primary_.font.getEscWidthY( text );
+			textY_ += h;
+			textX_ = 10;
+		}
+		primary_.drawText( textX_, textY_, text, color );
+		textX_ += w;
+	}
+	function draw( canvas:Canvas ) {
+		update();
+		canvas.save();
+		canvas.matrix.translate( x, y );
+		canvas.blendMode = bmAlpha;
+		canvas.fill( width, height, opacity_<<24 );
+		canvas.drawTexture( texture_ );
+		canvas.restore();
+	}
+	function clear() {
+		primary_.fillRect( 0, 0, width, height, 0 );
+		textX_ = 10;
+		textY_ = 10;
+	}
+	function processReturn() {
+		var h = primary_.font.height;
+		textY_ += h;
+		textX_ = 10;
+	}
+	property width {
+		getter() { return primary_.width; }
+	}
+	property height {
+		getter() { return primary_.height; }
+	}
+};
