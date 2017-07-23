@@ -55,6 +55,11 @@ class CanvasWindow extends Window {
 		if(elm.visible !== void) img.visible = +elm.visible;
 		if(elm.opacity !== void) img.opacity = +elm.opacity;
 	}
+	function setMessage(elm) {
+		if( elm.visible !== void ) {
+			screen_.setMessageVisible( +elm.visible );
+		}
+	}
 	//--------------------------------------------------- トランジション関連 --
 	function onTransitionCompleted() {
 		// トランジションが終了したときに呼ばれる
@@ -84,6 +89,7 @@ class CanvasWindow extends Window {
 	}
 
 	function showLineBreak(elm) {
+		screen_.showLineBreak();
 		// conductor を 'click' まで待ち状態に
 		conductor.wait(%[
 			click : function
@@ -96,6 +102,7 @@ class CanvasWindow extends Window {
 		return -2;
 	}
 	function showPageBreak(elm) {
+		screen_.showPageBreak();
 		// conductor を 'click' まで待ち状態に
 		conductor.wait(%[
 			click : function
@@ -264,6 +271,11 @@ class CanvasWindow extends Window {
 		// メッセージレイヤのリセットを行うが、ct のように
 		// current のリセットは行わないもの
 		screen_.clearMessage();
+		return 0;
+	} incontextof this,
+	
+	message : function(elm) {
+		setMessage(elm);
 		return 0;
 	} incontextof this,
 

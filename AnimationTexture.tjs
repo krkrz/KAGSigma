@@ -5,10 +5,12 @@ class AnimationTexture {
 	var texture_:Texture;
 	var sepalateCount_:int;
 	var duration_:int;
+	var eachTime_:int;
 	var loop_:bool;
 	var startTick_:int;
 	var playing_:bool;
 	var area_:Rect;
+	var eachWidth_:int;
 
 	/**
 	 * @param storage テクスチャファイル名
@@ -22,7 +24,9 @@ class AnimationTexture {
 		duration_ = duration;
 		loop_ = loop;
 		playing_ = false;
-		area_ = new Rect( 0, 0, texture_.width/count, texture_.height );
+		eachWidth_ = texture_.width/count;
+		area_ = new Rect( 0, 0, eachWidth_, texture_.height );
+		eachTime_ = duration / count;
 	}
 
 	function start() {
@@ -32,6 +36,24 @@ class AnimationTexture {
 	function stop() {
 		playing_ = false;
 	}
-	function draw( canvas:Canvas ) {
+	function draw( canvas:Canvas, x:int, y:int, height:int ) {
+		if( playing_ == false ) return;
+
+		var tick = System.getTickCount();
+		var offset = ((tick - startTick_) % duration_ ) \ eachTime_;
+		if( offset > (sepalateCount_-1) ) offset = sepalateCount_-1;
+
+		canvas.save();
+		canvas.blendMode = bmAlpha;
+		var scale = (real)height / (real)texture_.height;
+		canvas.matrix.translate( x, y );
+		canvas.matrix.scale( scale, scale );
+		area_.setOffset( eachWidth_ * offset, 0 );
+		canvas.drawTextureAtlas( area_, texture_ );
+		canvas.restore();
 	}
+	property isPlaying {
+		getter() { return playing_; }
+	}
+	
 };

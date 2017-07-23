@@ -12,20 +12,29 @@ class MessageTexture extends LayerOwnerTexture {
 	var x:int;
 	var y:int;
 	var opacity_:int;
+	var visible_:bool;
+	// メッセージレイヤーが一つと言うことで、ここにテクスチャ作っているが、
+	// メッセージレイヤー複数作るのなら、テクスチャは1個だけ作る方が効率的。
+	// TextureはCopyOnWriteされていない(忘れていた、将来対応した方が良さそう)
+	var pageAnime_:AnimationTexture;
+	var lineAnime_:AnimationTexture;
 
 	function MessageTexture( width:int , height:int ) {
 		super.LayerOwnerTexture( width, height );
 
 		//primary_.font.face = "Noto Sans CJK JP,Noto Sans,MotoyaLMaru,Roboto";
 		primary_.font.face = "Gen Shin Gothic Monospace";
-		primary_.font.height = 26;
+		primary_.font.height = 32;
 
+		pageAnime_ = new AnimationTexture("PageBreak", 16, 800, true );
+		lineAnime_ = new AnimationTexture("LineBreak", 16, 800, true );
 
-		textX_ = 10;
-		textY_ = 10;
+		textX_ = 0;
+		textY_ = 0;
 		x = 0;
 		y = 0;
 		opacity_ = 128;
+		visible_ = true;
 	}
 
 	// function drawText(x, y, text, color, opa=255, aa=true, shadowlevel=0, shadowcolor=0x000000, shadowwidth=0, shadowofsx=0, shadowofsy=0) {}
@@ -35,37 +44,68 @@ class MessageTexture extends LayerOwnerTexture {
 	 */
 	function putText( text, color ) {
 		var w = primary_.font.getEscWidthX( text );
-		if( (w + textX_) > (width-10) ) {
+		if( (w + textX_) > (width-10-primary_.font.height) ) {
 			var h = primary_.font.height; // primary_.font.getEscWidthY( text );
 			textY_ += h;
-			textX_ = 10;
+			textX_ = 0;
 		}
 		primary_.drawText( textX_, textY_, text, color );
 		textX_ += w;
+		cancelAnime();
+	}
+	function cancelAnime() {
+		pageAnime_.stop();
+		lineAnime_.stop();
 	}
 	function draw( canvas:Canvas ) {
-		update();
-		canvas.save();
-		canvas.matrix.translate( x, y );
-		canvas.blendMode = bmAlpha;
-		canvas.fill( width, height, opacity_<<24 );
-		canvas.drawTexture( texture_ );
-		canvas.restore();
+		if( visible_ ) {
+			update();
+			canvas.save();
+			canvas.blendMode = bmAlpha;
+			// 下地(黒)を半透明で余白を含めて描画
+			canvas.matrix.translate( x, y );
+			canvas.fill( width+20, height+20, opacity_<<24 );
+			canvas.restore();
+
+			if( pageAnime_.isPlaying ) {
+				pageAnime_.draw( canvas, textX_+10+x, textY_+10+y, primary_.font.height );
+			} else if( lineAnime_.isPlaying ) {
+				lineAnime_.draw( canvas, textX_+10+x, textY_+10+y, primary_.font.height );
+			}
+
+			canvas.save();
+			// テキストレイヤーを余白分移動して描画
+			canvas.matrix.translate( x+10, y+10 );
+			canvas.drawTexture( texture_ );
+			canvas.restore();
+		}
+	}
+	function showLineBreak() {
+		lineAnime_.start();
+	}
+	function showPageBreak() {
+		pageAnime_.start();
 	}
 	function clear() {
 		primary_.fillRect( 0, 0, width, height, 0 );
-		textX_ = 10;
-		textY_ = 10;
+		textX_ = 0;
+		textY_ = 0;
+		cancelAnime();
 	}
 	function processReturn() {
 		var h = primary_.font.height;
 		textY_ += h;
-		textX_ = 10;
+		textX_ = 0;
+		cancelAnime();
 	}
 	property width {
 		getter() { return primary_.width; }
 	}
 	property height {
 		getter() { return primary_.height; }
+	}
+	property visible {
+		getter() { return visible_; }
+		setter( x ) { visible_ = x; }
 	}
 };

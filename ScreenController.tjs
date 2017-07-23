@@ -43,7 +43,7 @@ class ScreenController {
 	 * @param canvas 描画対象キャンバス
 	 */
 	function onDraw( canvas:Canvas ) {
-		dm( "draw : " + (System.getTickCount()-lastTick_) );
+		// dm( "draw : " + (System.getTickCount()-lastTick_) );
 		lastTick_ = System.getTickCount();
 		if( nextTransStart ) {
 			nextTransStart = false;

@@ -9,6 +9,7 @@ class RootOffscreen {
 	var crossfadeShader_:ShaderProgram;	// クロスフェード用シェーダ
 	var universalTransShader_:ShaderProgram;	// ユニバーサルトランジション用シェーダ
 	var defaultShader_:ShaderProgram;
+	var defaultFillShader_:ShaderProgram;
 
 	function RootOffscreen( width:int, height:int ) {
 		offscreen_ = new Offscreen( width, height );
@@ -19,6 +20,7 @@ class RootOffscreen {
 		universalTransShader_.s_vague = (real)64 / 255.0;
 		defaultShader_ = new ShaderProgram("default_rev.vert","default.frag");
 		defaultShader_.a_opacity = 1.0;
+		defaultFillShader_ = new ShaderProgram("defaultfill_rev.vert","defaultfill.frag");
 	}
 
 	/**
@@ -31,16 +33,24 @@ class RootOffscreen {
 	}
 
 	function prepareDrawing( canvas:Canvas ) {
+		// オフスクリーンに描画する
 		canvas.renderTarget = offscreen_;
+		// 上下反転していないシェーダーをデフォルトにする
 		canvas.defaultShader = defaultShader_;
+		canvas.defaultFillShader = defaultFillShader_;
+		// 行列を単位行列にする
 		canvas.matrix.reset();
+		// 黒で塗りつぶす。
 		canvas.clear(0xff000000);
 	}
 
 	function postDrawing( canvas:Canvas ) {
 		// レンダーターゲット変更、内部でflushされている。
 		canvas.renderTarget = void;
+
+		// シェーダーを組み込み元に戻す
 		canvas.defaultShader = void;
+		canvas.defaultFillShader = void;
 
 		// オフスクリーンのテクスチャを交換する。
 		offscreen_.exchangeTexture( backtexture_ );

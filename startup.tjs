@@ -11,11 +11,11 @@ Storages.addAutoPath( "scenario/" );
 // とりあえずいくつかフォントを追加する
 //Font.addFont( "NotoSansCJKjp-Regular.otf" );
 //Font.addFont( "NotoSans-Regular.ttf" );
-Font.addFont( "GenShinGothic-Monospace-Bold.ttf" );
+//Font.addFont( "GenShinGothic-Monospace-Bold.ttf" );
 Font.addFont( "GenShinGothic-Monospace-Regular.ttf" );
 //Font.addFont( "MTLc3m.ttf" );
 //Font.addFont( "MTLmr3m.ttf" );
-Font.addFont( "Roboto-Regular.ttf" );
+//Font.addFont( "Roboto-Regular.ttf" );
 
 Plugins.link( "kagparser.dll" );
 
@@ -39,9 +39,10 @@ KAGLoadScript("ScreenController.tjs");
 KAGLoadScript("GameScreen.tjs");
 KAGLoadScript("LayerOwnerTexture.tjs");
 KAGLoadScript("MessageTexture.tjs");
+KAGLoadScript("AnimationTexture.tjs");
 KAGLoadScript("CanvasWindow.tjs");
 
-global.kag = new CanvasWindow( 640, 480 );
+global.kag = new CanvasWindow( 1080, 1920 );
 
 
 kag.process("first.ks");
