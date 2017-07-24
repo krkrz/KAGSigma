@@ -60,6 +60,22 @@ class CanvasWindow extends Window {
 			screen_.setMessageVisible( +elm.visible );
 		}
 	}
+	function onDeactivate() {
+		if( System.isAndroid ) {
+			close();
+		}
+	}
+	function onKeyDown(key, shift) {
+		super.onKeyDown( key, shift );
+	}
+	function onKeyUp(key, shift) {
+		super.onKeyUp( key, shift );
+		if( key == VK_BACK ) {
+			if( System.isAndroid ) {
+				close();
+			}
+		}
+	}
 	//--------------------------------------------------- トランジション関連 --
 	function onTransitionCompleted() {
 		// トランジションが終了したときに呼ばれる
