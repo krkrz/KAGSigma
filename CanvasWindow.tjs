@@ -70,7 +70,7 @@ class CanvasWindow extends Window {
 	}
 	function onKeyUp(key, shift) {
 		super.onKeyUp( key, shift );
-		if( key == VK_BACK ) {
+		if( key == VK_BACK_SCREEN ) {
 			if( System.isAndroid ) {
 				close();
 			}
