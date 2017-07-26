@@ -62,7 +62,7 @@ class CanvasWindow extends Window {
 	}
 	function onDeactivate() {
 		if( System.isAndroid ) {
-			close();
+			// Androidではオートセーブしないと、この後殺される可能性がある。
 		}
 	}
 	function onKeyDown(key, shift) {
@@ -72,6 +72,10 @@ class CanvasWindow extends Window {
 		super.onKeyUp( key, shift );
 		if( key == VK_BACK_SCREEN ) {
 			if( System.isAndroid ) {
+				// 本来はタイトル画面か確認して、Toastを出してもう1回戻るキーで終了するなど表示し、その次の戻るキーで終了するか。
+				// 確認ダイアログで終了する。
+				// 最近は手軽な2回の戻るキーで終了が増えている印象。
+				// ただ、フルスクリーンのゲームの場合は確認ダイアログの方が操作しやすいかも。
 				close();
 			}
 		}
