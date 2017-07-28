@@ -19,6 +19,14 @@ class ScreenController {
 	var owner_:CanvasWindow;
 	var aspectRatio_;
 	var lastTick_;
+	var yesNoDialog_;
+	var dialog_;
+
+	var isPosCalc:bool;
+	var inputMatrix_:Matrix32;
+	var drawMatrix_:Matrix32;
+	var screenOffsetX_:int;
+	var screenOffsetY_:int;
 
 	/**
 	 * 描画幅、高さはWindowsではWindowサイズ指定があるので、クライアント領域と一致するようになるが、Androidでは画面サイズは固定なので
@@ -34,7 +42,13 @@ class ScreenController {
 		height_ = height;
 		nodes_ = new Array();
 		aspectRatio_ = (real)width/(real)height;
+		inputMatrix_ = new Matrix32();
+		drawMatrix_ = new Matrix32();
+		isPosCalc = false;
+		screenOffsetX_ = 0;
+		screenOffsetY_ = 0;
 
+		yesNoDialog_ = new YesNoDialog();
 		lastTick_ = System.getTickCount();
 		// 画面の回転に関しては考慮していない。
 	}
@@ -59,37 +73,23 @@ class ScreenController {
 
 		// この間に実際の描画を行う
 		onNodeDraw( canvas );
-		//canvas.fill( 200, 200, 0x80ff0000 );
+
+		// ダイアログがあったら描画
+		if( dialog_ !== void ) {
+			dialog_.draw( canvas, width_, height_ );
+		}
 
 		// オフスクリーンを解除し、実際に画面へ描画先を戻す
 		screen_.postDrawing( canvas );
 
 		// 実際の画面への描画処理
 		canvas.enableClipRect = false;
-		canvas.matrix.reset();
 
 		// 画面に合わせて拡大縮小する
-		var realWidth:int = canvas.width;
-		var realHeight:int = canvas.height;
-		var width = realWidth;
-		var height = realHeight;
-		var realAspectRatio = (real)width/(real)height;
-		var aspectDeformation = aspectRatio_ / realAspectRatio - 1.0;
-		if( Math.abs(aspectDeformation) > 0.01 ) {
-			// アスペクト比が変わるので、どちらかを狭める
-			if( aspectDeformation > 0 ) {
-				height = ( width / aspectRatio_ );
-			} else {
-				width = ( height * aspectRatio_ );
-			}
+		if( isPosCalc == false ) {
+			updateScreenSize( canvas );
 		}
-		var aw = (real)width/(real)width_;
-		var ah = (real)height/(real)height_;
-		// dm( "width : " + aw + ", height : " + ah );
-		canvas.matrix.setScale( aw, ah );
-		// 拡縮に影響されずダイレクトに移動したいので
-		canvas.matrix.m31 = (realWidth-width)/2;
-		canvas.matrix.m32 = (realHeight-height)/2;
+		canvas.matrix.set( drawMatrix_ );
 
 		if( inTransition == false ) {
 			screen_.draw( canvas );
@@ -108,6 +108,41 @@ class ScreenController {
 	}
 	function onNodeDraw( canvas:Canvas ) {
 	}
+	function confirmClose() {
+		if( dialog_ === void ) {
+			yesNoDialog_.create( "終了確認", "終了しますか？" );
+			dialog_ = yesNoDialog_;
+		}
+	}
+	function updateScreenSize( canvas:Canvas ) {
+		var realWidth:int = canvas.width;
+		var realHeight:int = canvas.height;
+		var width = realWidth;
+		var height = realHeight;
+		var realAspectRatio = (real)width/(real)height;
+		var aspectDeformation = aspectRatio_ / realAspectRatio - 1.0;
+		if( Math.abs(aspectDeformation) > 0.01 ) {
+			// アスペクト比が変わるので、どちらかを狭める
+			if( aspectDeformation > 0 ) {
+				height = ( width / aspectRatio_ );
+			} else {
+				width = ( height * aspectRatio_ );
+			}
+		}
+		var aw = (real)width/(real)width_;
+		var ah = (real)height/(real)height_;
+
+		screenOffsetX_ = (realWidth-width)/2;
+		screenOffsetY_ = (realHeight-height)/2;
+		inputMatrix_.setScale( 1.0/aw, 1.0/ah );
+
+		drawMatrix_.setScale( aw, ah );
+		// 拡縮に影響されずダイレクトに移動したいので
+		drawMatrix_.m31 = (realWidth-width)/2;
+		drawMatrix_.m32 = (realHeight-height)/2;
+
+		isPosCalc = true;
+	}
 
 	/**
 	 * @param duration トランジション時間(msec)
@@ -122,6 +157,41 @@ class ScreenController {
 	function onFinishTransition() {
 		// トランジション終了待ちを解除するなど
 		owner_.onTransitionCompleted();
+	}
+	function onPointerDown( type, x, y, cx, cy, shift, id ):bool {
+		if( dialog_ !== void ) {
+			// ダイアログ出ている間は、入力を消費してしまう
+			return true;
+		}
+		return false;
+	}
+	function onPointerMove( type, x, y, cx, cy, shift, id ):bool {
+		if( dialog_ !== void ) {
+			// ダイアログ出ている間は、入力を消費してしまう
+			return true;
+		}
+		return false;
+	}
+	function onPointerUp( type, x, y, cx, cy, shift, id ):bool {
+		if( dialog_ !== void ) {
+			if( isPosCalc == false ) {
+				updateScreenSize( owner_.canvas );
+			}
+
+			// スクリーン座標から描画座標へ変換する
+			x -= screenOffsetX_;
+			y -= screenOffsetY_;
+			inputMatrix_.transform( x, y );
+
+			if( dialog_.onPointerUp( x, y, owner_ ) ) {
+				// ボタン押された
+				dialog_ = void; // 非表示にする
+			}
+
+			// ダイアログ出ている間は、入力を消費してしまう
+			return true;
+		}
+		return false;
 	}
 };
 

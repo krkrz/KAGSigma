@@ -35,6 +35,7 @@ function KAGLoadScript(name)
 KAGLoadScript("Conductor.tjs");
 KAGLoadScript("ImageNode.tjs");
 KAGLoadScript("RootOffscreen.tjs");
+KAGLoadScript("YesNoDialog.tjs");
 KAGLoadScript("ScreenController.tjs");
 KAGLoadScript("GameScreen.tjs");
 KAGLoadScript("LayerOwnerTexture.tjs");

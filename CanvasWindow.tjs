@@ -6,6 +6,7 @@ class CanvasWindow extends Window {
 	var actualChSpeed = 30;
 	var clickWaiting = false; // クリック待ちかどうか
 	var drawWaiting = false;
+	var askClose = true;
 
 	function CanvasWindow(width,height) {
 		super.Window();
@@ -36,11 +37,38 @@ class CanvasWindow extends Window {
 		}
 	}
 	function onPointerDown( type, x, y, cx, cy, shift, id ) {
+		if( screen_.onPointerDown( type, x, y, cx, cy, shift, id ) == false ) {
+			// 共通処理
+		}
 	}
 	function onPointerMove( type, x, y, cx, cy, shift, id ) {
+		if( screen_.onPointerMove( type, x, y, cx, cy, shift, id ) == false ) {
+			// 共通処理
+		}
 	}
 	function onPointerUp( type, x, y, cx, cy, shift, id ) {
-		onPrimaryClick();
+		if( screen_.onPointerUp( type, x, y, cx, cy, shift, id ) == false ) {
+			// 共通処理
+			onPrimaryClick();
+		}
+	}
+	function onDisplayRotate(orientation, angle, bpp, width, height) {
+		screen_.updateScreenSize();
+	}
+
+	// close ダイアログしか今はない
+	function onDialogYes() {
+		if( System.isAndroid ) {
+			close();
+		}
+		askClose = false;
+		global.shutdownTrigger = new AsyncTrigger(handleCloseByScript, '');
+		global.shutdownTrigger.cached = true;
+		global.shutdownTrigger.trigger();
+	}
+	function onDialogNo() {}
+	function handleCloseByScript() {
+		close();
 	}
 
 	function notifyRun() {}
@@ -65,6 +93,11 @@ class CanvasWindow extends Window {
 			// Androidではオートセーブしないと、この後殺される可能性がある。
 		}
 	}
+	function onCloseQuery() {
+		if( !askClose ) { super.onCloseQuery(true); return; }
+		super.onCloseQuery( false );
+		screen_.confirmClose();
+	}
 	function onKeyDown(key, shift) {
 		super.onKeyDown( key, shift );
 	}
@@ -76,7 +109,7 @@ class CanvasWindow extends Window {
 				// 確認ダイアログで終了する。
 				// 最近は手軽な2回の戻るキーで終了が増えている印象。
 				// ただ、フルスクリーンのゲームの場合は確認ダイアログの方が操作しやすいかも。
-				close();
+				screen_.confirmClose();
 			}
 		}
 	}
