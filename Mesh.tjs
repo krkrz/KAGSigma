@@ -1,0 +1,86 @@
+/**
+ * メッシュ情報オブジェクト
+ * ※ drawMesh 用の情報最適化のために専用オブジェクト化
+ */
+class Mesh {
+	var vertex_:VertexBuffer;
+	var index_:VertexBuffer;
+
+	var vtxBind_:VertexBinder;
+	var uvBind_:VertexBinder;
+	var idxBind_:VertexBinder;
+
+	var texture_:Texture;
+
+	function Mesh() {}
+
+	/**
+	 * 矩形領域の追加
+	 * @param texture テクスチャ
+	 * @param uvRect テクスチャ矩形
+	 * @param vtxRect 表示位置矩形
+	 */
+	function addRange( texture:Texture, uvRect:Rect, vtxRect:Rect ) {
+		texture_ = texture;
+
+		var tw:real = texture.memoryWidth;
+		var th:real = texture.memoryHeight;
+
+		vertex_ = new VertexBuffer(
+		[
+		// UV
+		uvRect.left/tw, uvRect.top/th,
+		uvRect.left/tw, uvRect.bottom/th,
+		uvRect.right/tw, uvRect.top/th,
+		uvRect.right/tw, uvRect.bottom/th,
+
+		// Vertex
+		vtxRect.left, vtxRect.top,
+		vtxRect.left, vtxRect.bottom,
+		vtxRect.right, vtxRect.top,
+		vtxRect.right, vtxRect.bottom
+		],
+		VertexBuffer.dtFloat,
+		VertexBuffer.utStatic );
+
+		index_ = new VertexBuffer(
+		[
+		0, 1, 2,
+		1, 3, 2
+		], 
+		VertexBuffer.dtUByte,
+		VertexBuffer.utStatic,
+		true );
+
+		uvBind_ = new VertexBinder( vertex_ );
+		uvBind_.offset = 0;
+		uvBind_.stride = 2 * 4; // 2 * sizeof(float)
+		uvBind_.componentCount = 2;
+
+		vtxBind_ = new VertexBinder( vertex_ );
+		vtxBind_.offset = 8 * 4; // 8 * sizeof(float)
+		vtxBind_.stride = 2 * 4; // 2 * sizeof(float)
+		vtxBind_.componentCount = 2;
+
+		idxBind_ = new VertexBinder( index_ );
+		idxBind_.offset = 0;
+		idxBind_.stride = 1;	// sizeof(ubyte)
+		idxBind_.componentCount = 2;
+	}
+
+	function draw( canvas:Canvas ) {
+		var shader:ShaderProgram = canvas.defaultShader;
+		shader.s_tex0 = texture_;
+		shader.a_pos = vtxBind_;
+		shader.a_texCoord = uvBind_;
+		shader.a_opacity_ = 1.0;
+
+		canvas.blendMode = bmAlpha;
+		canvas.drawMesh( shader, idxBind_, 6, VertexBuffer.ptTriangles );
+		//canvas.drawMesh( shader, 4, VertexBuffer.ptTriangleStrip );
+
+		shader.s_tex0 = void;
+		shader.a_pos = void;
+		shader.a_texCoord = void;
+	}
+};

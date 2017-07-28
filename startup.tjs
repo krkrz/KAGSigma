@@ -42,6 +42,7 @@ KAGLoadScript("LayerOwnerTexture.tjs");
 KAGLoadScript("MessageTexture.tjs");
 KAGLoadScript("AnimationTexture.tjs");
 KAGLoadScript("CanvasWindow.tjs");
+KAGLoadScript("Mesh.tjs");
 
 global.kag = new CanvasWindow( 1080, 1920 );
 
