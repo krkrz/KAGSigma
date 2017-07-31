@@ -3,6 +3,7 @@ class GameScreen extends ScreenController {
 
 	var message_:MessageTexture;
 	var images_:Array;
+	// var mesh_:Mesh;
 
 	function GameScreen( owner:CanvasWindow, width:int, height:int ) {
 		super.ScreenController( owner, width, height );
@@ -26,6 +27,9 @@ class GameScreen extends ScreenController {
 		message_.x = 16;
 		message_.y = 16 + height_/2;
 		nodes_.add( message_ );
+
+		// mesh_ = new Mesh();
+		// mesh_.addRange( new Texture("rooftop.jpg"), new Rect(100,100,600,800), new Rect(10,800,400,1000) );
 	}
 
 	function onNodeDraw( canvas:Canvas ) {
@@ -33,6 +37,13 @@ class GameScreen extends ScreenController {
 		for( var i = 0; i < count; i++ ) {
 			nodes_[i].draw( canvas );
 		}
+
+		/*
+		canvas.save();
+		canvas.matrix.reset();
+		mesh_.draw( canvas );
+		canvas.restore();
+		*/
 	}
 	function putText( text, color ) {
 		message_.putText( text, color );

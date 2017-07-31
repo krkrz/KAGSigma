@@ -15,7 +15,6 @@ class YesNoDialog {
 	var font_:Font;
 	var yesArea_:Rect;
 	var noArea_:Rect;
-	var titleArea_:Rect;
 	var textArea_:Rect;
 	var buttonArea_:Rect;
 
@@ -62,17 +61,12 @@ class YesNoDialog {
 	 *
 	 * ここでは文字をフルカラーで描画しているが、8bppでも文字描画できるようにしたので、テクスチャも8bppにして、シェーダーで
 	 * 色を付けるようにしてもよい。そうするとテクスチャメモリが1/4に節約できる。
-	 * @param title ダイアログタイトル文字列
 	 * @param text ダイアログ内容文字列
 	 * @param yesText YESボタン文字列
 	 * @param noText NOボタン文字列
 	 */
-	function create( title:string, text:string, yesText:string="はい", noText:string="いいえ" ) {
+	function create( text:string, yesText:string="はい", noText:string="いいえ" ) {
 		// 文字描画領域サイズを得る
-		titleArea_ = font_.getGlyphDrawRect(title);
-		titleArea_.right += titleArea_.left;	// 少しマージンを持たせる
-		titleArea_.bottom += titleArea_.top;
-		titleArea_.left = titleArea_.top = 0;
 		textArea_ = font_.getGlyphDrawRect(text);
 		textArea_.right += textArea_.left;	// 少しマージンを持たせる
 		textArea_.bottom += textArea_.top;
@@ -93,9 +87,6 @@ class YesNoDialog {
 		buttonArea_ = new Rect( 0, 0, buttonWidth, buttonHeight );
 
 		// 各文字列をBitmapに描画していく。
-		var titleImage:Bitmap = new Bitmap(titleArea_.right, titleArea_.bottom);
-		ImageFunction.fillRect( titleImage, 0 );
-		ImageFunction.drawText( titleImage, font_, 0, 0, title, 0x000000, 255, true, dfAlpha );
 
 		// 改行など考慮していないので、複数行の可能性があるのなら改行も考えた方が良い。
 		var textImage:Bitmap = new Bitmap(textArea_.right, textArea_.bottom);
@@ -111,10 +102,10 @@ class YesNoDialog {
 		ImageFunction.drawText( noImage, font_, 0, 0, noText, 0x000000, 255, true, dfAlpha );
 
 		// 画像はただ縦に並べる
-		var texHeight = titleImage.height + textImage.height + yesImage.height + noImage.height;
+		var texHeight = textImage.height + yesImage.height + noImage.height;
 
 		// 幅は一番大きいものを採用
-		var texWidth = titleImage.width;
+		var texWidth = 0;
 		texWidth = texWidth < textImage.width ? textImage.width : texWidth;
 		texWidth = texWidth < yesImage.width ? yesImage.width : texWidth;
 		texWidth = texWidth < noImage.width ? noImage.width : texWidth;
@@ -125,9 +116,9 @@ class YesNoDialog {
 
 		// テクスチャに画像をコピーしていきつつ、その場所(矩形)を保持する
 		var top:int = 0;
-		texture_.copyRect( 0, top, titleImage, titleArea_ );
+		//texture_.copyRect( 0, top, titleImage, titleArea_ );
 
-		top += titleImage.height;
+		//top += titleImage.height;
 		texture_.copyRect( 0, top, textImage, textArea_ );
 		textArea_.addOffset( 0, top );
 
@@ -142,10 +133,9 @@ class YesNoDialog {
 		// ボタンを横に並べたものと比較
 		texWidth = (buttonWidth*2+MarginPixel) > texWidth ? (buttonWidth*2+MarginPixel) : texWidth;
 		width_ = texWidth + MarginPixel*2; // 左右マージンを加算
-		height_ = MarginPixel*6 + titleArea_.height + textArea_.height + buttonArea_.height;
+		height_ = MarginPixel*3 + textArea_.height + buttonArea_.height;
 
 		// 不要になったBitmapは破棄
-		invalidate titleImage;
 		invalidate textImage;
 		invalidate yesImage;
 		invalidate noImage;
@@ -182,23 +172,17 @@ class YesNoDialog {
 		canvas.matrix.setTranslate( x, top );
 		canvas.draw9Patch( dialogBottom_, width_, dialogBottom_.height );
 
-		// タイトル部分描画
-		var tw = (width_ - titleArea_.width) / 2;
-		top = y + MarginPixel;
-		canvas.matrix.setTranslate( x+tw, top );
-		canvas.drawTextureAtlas( titleArea_, texture_ );	// タイトル描画
-
 		// テキスト描画
-		tw = (width_ - textArea_.width) / 2;
-		top += MarginPixel*2+titleArea_.height;
+		var tw = (width_ - textArea_.width) / 2;
+		top = y + MarginPixel;
 		canvas.matrix.setTranslate( x+tw, top );
 		canvas.drawTextureAtlas( textArea_, texture_ );	// テキスト描画
 
-		var bottonTop = titleArea_.height + MarginPixel*5 + textArea_.height;
+		var bottonTop = MarginPixel*3 + textArea_.height;
 		var yesLeft = (width_ - buttonArea_.width*2 - MarginPixel) / 2;
 		var noLeft = yesLeft + buttonArea_.width + MarginPixel;
 		tw = yesLeft - tw;
-		top += MarginPixel*2 + textArea_.height;
+		top += MarginPixel + textArea_.height;
 
 		canvas.matrix.setTranslate( x+yesLeft, top );
 		canvas.draw9Patch( buttonTex_, buttonArea_.width, buttonArea_.height );

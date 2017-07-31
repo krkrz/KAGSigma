@@ -43,29 +43,11 @@ class Mesh {
 		VertexBuffer.dtFloat,
 		VertexBuffer.utStatic );
 
-		index_ = new VertexBuffer(
-		[
-		0, 1, 2,
-		1, 3, 2
-		], 
-		VertexBuffer.dtUByte,
-		VertexBuffer.utStatic,
-		true );
+		index_ = new VertexBuffer( [ 0, 1, 2, 1, 3, 2 ],  VertexBuffer.dtUByte, VertexBuffer.utStatic, true );
 
-		uvBind_ = new VertexBinder( vertex_ );
-		uvBind_.offset = 0;
-		uvBind_.stride = 2 * 4; // 2 * sizeof(float)
-		uvBind_.componentCount = 2;
-
-		vtxBind_ = new VertexBinder( vertex_ );
-		vtxBind_.offset = 8 * 4; // 8 * sizeof(float)
-		vtxBind_.stride = 2 * 4; // 2 * sizeof(float)
-		vtxBind_.componentCount = 2;
-
-		idxBind_ = new VertexBinder( index_ );
-		idxBind_.offset = 0;
-		idxBind_.stride = 1;	// sizeof(ubyte)
-		idxBind_.componentCount = 2;
+		uvBind_ = new VertexBinder( vertex_, 2*4 /* 2*sizeof(float) */, 2 );
+		vtxBind_ = new VertexBinder( vertex_ , 2*4 /* 2*sizeof(float) */, 2, 8*4 /* 8*sizeof(float) */);
+		idxBind_ = new VertexBinder( index_, 1/* sizeof(ubyte) */, 2, 0 );
 	}
 
 	function draw( canvas:Canvas ) {
@@ -76,7 +58,10 @@ class Mesh {
 		shader.a_opacity_ = 1.0;
 
 		canvas.blendMode = bmAlpha;
+		// インデックを使用した描画
 		canvas.drawMesh( shader, idxBind_, 6, VertexBuffer.ptTriangles );
+
+		// インデックスを使用しない描画(トライアングルストラップ形式でVertexBufferを作っていたのでこのサンプルでは可能)
 		//canvas.drawMesh( shader, 4, VertexBuffer.ptTriangleStrip );
 
 		shader.s_tex0 = void;

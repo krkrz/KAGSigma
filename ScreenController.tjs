@@ -110,7 +110,7 @@ class ScreenController {
 	}
 	function confirmClose() {
 		if( dialog_ === void ) {
-			yesNoDialog_.create( "終了確認", "終了しますか？" );
+			yesNoDialog_.create( "終了しますか？" );
 			dialog_ = yesNoDialog_;
 		}
 	}
