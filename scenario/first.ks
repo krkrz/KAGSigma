@@ -1,3 +1,7 @@
+[video visible=true width=1080 height=608]
+[playvideo storage="test.mp4"]
+[video visible=true]
+[wv]
 [image layer=0 storage="mokumoku" visible=true]
 　トランジションを行います。[p]
 [message visible=flase]

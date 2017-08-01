@@ -1,0 +1,97 @@
+// Movie.tjs - ムービー再生
+// Copyright (C) W.Dee and contributors  改変・配布は自由です
+
+class Movie extends VideoOverlay
+{
+	var owner;
+	var lastStatus = "unload"; // 直前のステータス
+	var opened = false;
+	var storageName;
+
+	function Movie(owner) {
+		super.VideoOverlay(...);
+		this.owner = owner;
+	}
+
+	function finalize() {
+		if(lastStatus == "play") stop();
+		super.finalize(...);
+	}
+
+	function onStatusChanged(status) {
+		// ステータスの変更があった
+		if(lastStatus == "play" && status == "stop") {
+			owner.onMovieStop(id); // 停止
+			super.close();
+		}
+		lastStatus = status;
+	}
+
+	// 待てるかどうか
+	property canWaitStop { getter { return lastStatus == "play"; } }
+
+	property storage { getter { return this.storageName; } }
+
+	function open(storage) {
+		this.storageName = storage;
+		try {
+			opened = false;
+			mode = vomMFEVR;
+			try {
+				super.open(storage);
+				opened = true;
+			} catch(e) {
+				dm("ムービーを開くことができません : " + e.message);
+			}
+		} catch(e) {
+			if(e.message.indexOf(".dll") != -1) throw e;
+			dm("ムービー " + storage + " を再生できません : " +e.message);
+			return;
+		}
+	}
+
+	function play(storage) {
+		if(!opened) open(storage);
+		try {
+			super.play();
+			opened = false;
+		} catch(e) {
+			if(e.message.indexOf(".dll") != -1) throw e;
+			dm("ムービー " + storage + " を再生できません : " + e.message);
+			return;
+		}
+	}
+
+	function resume() {
+		try {
+			super.play();
+		} catch(e) {
+			if(e.message.indexOf(".dll") != -1) throw e;
+			dm("ムービーを再生できません : " + e.message);
+			return;
+		}
+	}
+
+	function stop() {
+		super.stop(...);
+		super.close();
+	}
+
+	function setOptions(elm) {
+		// elm からオプションを設定
+		visible = +elm.visible if elm.visible !== void;
+		var l = left, t = top, w = width, h = height;
+		var set = false;
+		(set = true, l = +elm.left) if elm.left !== void;
+		(set = true, t = +elm.top) if elm.top !== void;
+		(set = true, w = +elm.width) if elm.width !== void;
+		(set = true, h = +elm.height) if elm.height !== void;
+		if(set) setBounds(l, t, w, h);
+
+		position = +elm.position if elm.position !== void;
+		// loop = +elm.loop if elm.loop !== void;
+		audioVolume = +elm.volume * 1000 if elm.volume !== void;
+	}
+}
+
+

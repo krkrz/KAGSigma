@@ -3,7 +3,8 @@ var dm = Debug.message; // これで dm("message"); でコンソールに messag
 
 Storages.addAutoPath( "img/" );
 //Storages.addAutoPath( "sound/" );
-//Storages.addAutoPath( "movie/" );
+Storages.addAutoPath( "bgm/" );
+Storages.addAutoPath( "movie/" );
 Storages.addAutoPath( "glsl/" );
 Storages.addAutoPath( "font/" );
 Storages.addAutoPath( "scenario/" );
@@ -43,8 +44,20 @@ KAGLoadScript("MessageTexture.tjs");
 KAGLoadScript("AnimationTexture.tjs");
 KAGLoadScript("CanvasWindow.tjs");
 KAGLoadScript("Mesh.tjs");
+KAGLoadScript("Movie.tjs");
+KAGLoadScript("BGM.tjs");
+
+/**
+ * BGM の設定(仮置き)
+ */
+function BGM_config() {
+// ◆ クロスフェードを行うか
+// doubleBuffered 変数には、サウンドバッファを２つ使用するかどうかを指定し
+// ます。true に設定するとサウンドバッファが 2 つ用意され、クロスフェードが
+// 可能になります。
+;doubleBuffered = true;
+}
+
 
 global.kag = new CanvasWindow( 1080, 1920 );
-
-
 kag.process("first.ks");

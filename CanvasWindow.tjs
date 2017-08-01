@@ -7,6 +7,8 @@ class CanvasWindow extends Window {
 	var clickWaiting = false; // クリック待ちかどうか
 	var drawWaiting = false;
 	var askClose = true;
+	var movie;
+	var bgm;
 
 	function CanvasWindow(width,height) {
 		super.Window();
@@ -20,6 +22,13 @@ class CanvasWindow extends Window {
 		screen_ = new GameScreen( this, width, height );
 		screen_.initializeGame();
 		add( screen_ );
+
+		movie = new Movie(this);
+		add( movie );
+
+		// BGM オブジェクトを作成
+		bgm = new BGM(this);
+		add(bgm);
 
 		drawCycle = 60;
 		visible = true;
@@ -113,6 +122,208 @@ class CanvasWindow extends Window {
 			}
 		}
 	}
+
+	//------------------------------------------------------------- BGM 処理 --
+	function onBGMFadeCompleted() {
+		// BGM のフェードが完了した
+		conductor.trigger('bgmfade');
+	}
+
+    // BGM停止処理
+    var bgmStopExp;
+    var bgmStopStorage;
+    var bgmStopTarget;
+    function handleBgmStop() { 
+        // BGM停止ハンドラ
+
+        // パラメータを保持して破棄
+        var exp     = bgmStopExp;
+        var storage = bgmStopStorage;
+        var target  = bgmStopTarget;
+        clearBgmStop();
+
+        // 処理実行
+        if (exp !== void) {
+            Scripts.eval(exp);
+        }
+        if (storage !== void || target !== void) {
+            process(storage, target);
+        }
+    }
+
+    function setBgmStop(elm) {
+        // BGM停止時処理の登録
+        bgmStopExp     = elm.exp;
+        bgmStopStorage = elm.storage;
+        bgmStopTarget  = elm.target;
+    }
+    
+    function clearBgmStop() {
+        // BGM停止時処理の解除
+        bgmStopExp     = void;
+        bgmStopStorage = void;
+        bgmStopTarget  = void;
+    }
+    
+	function onBGMStop() {
+		// BGM が停止した
+		conductor.trigger('bgmstop');
+        if (bgmStopExp !== void || bgmStopStorage !== void || bgmStopTarget !== void) {
+            global.stopBgmTrigger = new AsyncTrigger(handleBgmStop, '');
+            global.stopBgmTrigger.cached = true;
+            global.stopBgmTrigger.trigger();
+        }
+	}
+    // ------------------------------------------
+    var bgmLabelInfos = %[];
+    var bgmLabelInfo;
+
+    function handleBgmLabel() {
+        if (bgmLabelInfo !== void) {
+            if (bgmLabelInfo.exp !== void) {
+                Scripts.eval(bgmLabelInfo.exp);
+            }
+            if (bgmLabelInfo.storage !== void || bgmLabelInfo.target !== void) {
+                process(bgmLabelInfo.storage, bgmLabelInfo.target);
+            }
+        }
+    }
+
+    function onBGMLabel(label) {
+        // BGM のラベル通過処理
+        conductor.trigger('bgmlabel_' + label);
+        var obj = bgmLabelInfos[label];
+        if (obj !== void) {
+            bgmLabelInfo = obj;
+            global.labelBgmTrigger = new AsyncTrigger(handleBgmLabel, '');
+            global.labelBgmTrigger.cached = true;
+            global.labelBgmTrigger.trigger();
+        }
+    }
+
+    /**
+     * BGM ラベル処理の登録
+     */
+    function setBgmLabel(elm) {
+        if (elm.name !== void) {
+            var obj = %[];
+            obj.storage = elm.storage;
+            obj.target  = elm.target;
+            obj.exp     = elm.exp;
+            bgmLabelInfos[elm.name] = obj;
+        }
+    }
+
+    /**
+     * BGM ラベル処理の解除
+     */
+    function clearBgmLabel() {
+        bgmLabelInfos = %[];
+        bgmLabelInfo = void;
+    }
+    /**
+     * BGM のフェード終了を待つ
+     */
+	function waitBGMFade(elm) {
+		if(!bgm.inFading) return 0; // フェード中でなければ待たない
+		if(elm.canskip !== void && +elm.canskip && clickSkipEnabled) {
+			// スキップできる場合
+			if(skipMode) {
+				// スキップ中の場合
+				bgm.stopFade();
+				return 0; // スキップ中の場合はフェードを停止させて返る
+			}
+			conductor.wait(%[
+				click : function {
+					bgm.stopFade(); // フェーディングは停止する
+				} incontextof this,
+
+				bgmfade : function {
+					// やることなし
+				} incontextof this
+				]);
+		} else {
+			// スキップできない場合
+			conductor.wait(%[
+				bgmfade : function
+				{
+					// やることなし
+				} incontextof this
+				]);
+		}
+		return -2;
+	}
+
+	/**
+	 * BGM の再生終了を待つ
+	 */
+	function waitBGMStop(elm) {
+		if(!bgm.canWaitStop) return 0; // BGM 再生終了を待てなければそのまま戻る
+		if(elm.canskip !== void && +elm.canskip && clickSkipEnabled) {
+			// スキップできる場合
+			if(skipMode) {
+				// スキップ中の場合
+				bgm.stop();
+				return 0; // スキップ中の場合は再生を停止させて返る
+			}
+			conductor.wait(%[
+				click : function {
+					bgm.stop(); // 再生を終了する
+				} incontextof this,
+
+				bgmstop : function {
+					// やることなし
+				} incontextof this
+				]);
+		} else {
+			// スキップできない場合
+			conductor.wait(%[
+				bgmstop : function
+				{
+					// やることなし
+				} incontextof this
+				]);
+		}
+		return -2;
+	}
+	//--------------------------------------------------------- ムービー関連 --
+	function onMovieStop(id) {
+		// ムービーの再生が終了した
+		conductor.trigger('moviestop');
+	}
+
+	function waitMovieStop(elm) {
+		// ムービーの再生終了を待つ
+		if(!movie.canWaitStop) return 0; // ムービー再生終了を待てなければそのまま戻る
+		if(elm.canskip !== void && +elm.canskip && clickSkipEnabled) {
+			// スキップできる場合
+			if(skipMode) {
+				// スキップ中の場合
+				movie.stop();
+				return 0; // スキップ中の場合は再生を停止させて返る
+			}
+			conductor.wait(%[
+				click : function () {
+					movie.stop(); // 再生を終了する
+				} incontextof this,
+
+				'moviestop' =>
+				function () {
+					// やることなし
+				} incontextof this,
+				]);
+		} else {
+			// スキップできない場合
+			conductor.wait(%[
+				'moviestop' =>
+				function () {
+					// やることなし
+				} incontextof this,
+				]);
+		}
+		return -2;
+	}
+
 	//--------------------------------------------------- トランジション関連 --
 	function onTransitionCompleted() {
 		// トランジションが終了したときに呼ばれる
@@ -360,7 +571,37 @@ class CanvasWindow extends Window {
 		// 描画を1回待つ
 		return waitDraw(elm);
 	} incontextof this,
-	
+
+	//----------------------------------------- タグハンドラ群(ムービー操作) --
+	video : function(elm) {
+		// ムービーのオプションを設定する
+		movie.setOptions(elm);
+		return 0;
+	} incontextof this,
+
+	playvideo : function(elm) {
+		// ムービーを再生する
+		movie.play(elm.storage);
+		return 0;
+	} incontextof this,
+
+	stopvideo : function(elm) {
+		// ムービーを停止する
+		movie.stop();
+		return 0;
+	} incontextof this,
+
+	openvideo : function(elm) {
+		// ムービー再生の準備をする
+		movie.open(elm.storage);
+		return 0;
+	} incontextof this,
+
+	wv : function(elm) {
+		// ムービーの再生終了を待つ
+		return waitMovieStop(elm);
+	} incontextof this,
+
 	//----------------------------------------- タグハンドラ群(システム操作) --
 	s : function(elm)
 	{
